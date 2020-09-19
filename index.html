@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Assignment3#Mindmap with canvas</title>
+    <meta name="description" content="This website is mindmap tool">
+    <meta name="keyword" content="JavaScript,canvas,mindmap,brainstorming">
+    <meta name="author" content="aya tsubakino">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      @font-face{
+        font-family: 'ComicSansMS3';
+        src: url('ComicSansMS3.ttf');
+      }
+
+      canvas {
+        width: 100vw;
+        height: 100vh;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <canvas id="myMap"></canvas>
+    <script>
+      // Definition
+      var canvas = document.getElementById('myMap');
+      var context = canvas.getContext('2d');
+
+      var displaywidth = canvas.clientWidth;
+      var displayheight = canvas.clientHeight;
+
+      canvas.width = displaywidth;
+      canvas.height = displayheight;
+
+      context.font = "20px ComicSansMS3, sans-serif";
+      context.textAlign = 'center';
+      context.textBaseline = "middle";
+      var isCreating = true;
+      var firstNavi = true;
+
+      ideas = [];
+      function Idea(x, y, radiusX, radiusY, text, color, children, parent, angle){
+        this.x = x;
+        this.y = y;
+        this.radiusX = radiusX;
+        this.radiusY = radiusY;
+        this.text = text;
+        this.color = color;
+        this.children = children;
+        this.parent = parent;
+        this.angle = angle;
+      }
+
+      // Main topic is made and set initailly. 
+      var textwidth = context.measureText('Topic').width;
+      var color = "rgb(" + (~~(256 * Math.random())) + ", " + (~~(256 * Math.random())) + ", " + (~~(256 * Math.random())) + ")";
+      var idea = new Idea(displaywidth/2, displayheight/2, textwidth/2+10, 25, 'Topic', color, [], 360)
+      ideas.push(idea);
+
+      // When loading the page, call the drawAll function.
+      window.onload = drawAll; // windowをloadしたタイミングでdrawする。otherwise, ttfを読む前にdrawしてしまう
+
+      // Every time the new data is created or a data is updated, drawAll function is called. In this function, line, bubble, preview button and navi are drawn.
+      function drawAll(){
+        context.clearRect(0, 0, displaywidth, displayheight);
+        for (var i=0; i < ideas.length; i++){
+          if (ideas[i]){
+            drawLine(ideas[i]);
+          }
+        }
+        for (var i=0; i < ideas.length; i++){
+          if (ideas[i]){
+            drawBubble(ideas[i],360);
+          }
+        }
+        drawPreviewButtom();
+        drawNavi();
+      }
+
+      // Preview botton on the left top.
+      function drawPreviewButtom(){
+        context.beginPath();
+        context.rect(20, 20, 100, 40);
+        context.strokeStyle = 'black';
+        context.stroke();
+        context.fillStyle = 'black';
+        context.fillText('Preview', 70, 40);
+      }
+
+      // Draw lines based on the data array.
+      function drawLine(idea){
+        if (idea.children){
+          for (var i=0; i<idea.children.length; i++){
+            context.beginPath();
+            context.moveTo(idea.x,idea.y);
+            context.lineTo(idea.children[i].x,idea.children[i].y);
+            context.strokeStyle = 'black';
+            context.stroke();
+          }
+        }
+      }
+
+      // Draw bubbles based on the data array.
+      function drawBubble(idea,angle){
+        var textwidth = context.measureText(idea.text).width;
+        context.beginPath();
+        context.fillStyle = idea.color;
+        context.ellipse(idea.x, idea.y, textwidth/2+10, 25, 0, 0, Math.PI*2/360*angle);
+        context.fill();
+        context.fillStyle = "white";
+        context.fillText(idea.text, idea.x, idea.y);
+      }
+
+      // Draw navi.
+      function drawNavi(){
+        if (isCreating && firstNavi){
+          drawArrow(displaywidth/3, displayheight/3);
+        }else if(isCreating == false){
+          for (var i=0; i<ideas.length-1; i++){
+            if (ideas[i] != null){
+              drawArrow(ideas[i].x, ideas[i].y-ideas[i].radiusY-3);
+            }
+          }
+        }
+      }
+
+      function drawArrow(x,y){
+        context.beginPath();
+        context.moveTo(x,y);
+        context.lineTo(x,y-30);
+        context.moveTo(x,y);
+        context.lineTo(x-10,y-10);
+        context.moveTo(x,y);
+        context.lineTo(x+10,y-10);
+        context.strokeStyle = 'red';
+        context.stroke();
+        context.fillStyle = "red";
+        if (isCreating){
+          context.fillText('Click white space!',x,y-50);
+        }else{
+          context.fillText('Click bubble!',x,y-50);
+        }
+      }
+
+      // Create or update idea data
+      function createIdea(e){
+        var newIdea = true;
+        for (var i=0; i < ideas.length; i++){
+          var leftX = ideas[i].x - ideas[i].radiusX
+          var rightX = ideas[i].x + ideas[i].radiusX
+          var topY = ideas[i].y + ideas[i].radiusY
+          var bottomY = ideas[i].y - ideas[i].radiusY
+          if (e.offsetX > leftX && e.offsetX < rightX && e.offsetY < topY && e.offsetY > bottomY){
+            newIdea = false;
+            var text = prompt('Update your idea', ideas[i].text);
+            if (text) {
+              var textwidth = context.measureText(text).width;
+              ideas[i].radiusX = textwidth/2+10
+              ideas[i].text = text
+            } else {
+              if (ideas[i].parent && ideas[i].parent.children){
+                ideas[i].parent.children = ideas[i].parent.children.filter(child => child !== ideas[i])
+              }
+              delete ideas[i];
+              ideas = ideas.filter(idea => idea != null && idea != "")
+            }
+            drawAll(); 
+          }
+        }
+        if (newIdea){
+          var text = prompt('Write a new idea');
+          if (text) {
+            var textwidth = context.measureText(text).width;
+            var color = "rgb(" + (~~(256 * Math.random())) + ", " + (~~(256 * Math.random())) + ", " + (~~(256 * Math.random())) + ")"
+            var idea = new Idea(e.offsetX, e.offsetY, textwidth/2+10, 25, text, color, [], null, 360)
+            ideas.push(idea);
+            isCreating = false;
+            drawAll();
+          }
+        }
+      }
+
+      // Create line data connecting ideas.
+      function createLine(e){
+        isCreating = true;
+        for (var i=0; i < ideas.length; i++){
+          var leftX = ideas[i].x - ideas[i].radiusX
+          var rightX = ideas[i].x + ideas[i].radiusX
+          var topY = ideas[i].y + ideas[i].radiusY
+          var bottomY = ideas[i].y - ideas[i].radiusY
+          if (e.offsetX > leftX && e.offsetX < rightX && e.offsetY < topY && e.offsetY > bottomY){
+            ideas.slice(-1)[0].parent = ideas[i]
+            ideas[i].children.push(ideas.slice(-1)[0])
+            drawAll();
+          }
+        }
+      }
+
+      // When the preview buttom is clicked, every data is drawn in order with animation
+      var requestId;
+      var num = 0
+      var animatingLine = false;
+      function preview(){
+        if (ideas[num] && ideas[num].angle<=360 && !animatingLine){
+          drawBubble(ideas[num],ideas[num].angle)
+          ideas[num].angle = ideas[num].angle+5;
+          if (ideas[num].angle==360){
+            if (ideas[num].children){
+              for (var i=0; i<ideas[num].children.length; i++){
+                animatingLine = true;
+                animateLine(ideas[num].x, ideas[num].y, ideas[num].x, ideas[num].y, ideas[num].children[i].x, ideas[num].children[i].y,0)
+              }
+            }
+            num++;
+          }
+          requestId = requestAnimationFrame(preview);
+        }
+      }
+
+      function animateLine(startX,startY,currentX,currentY,endX,endY,t){
+        if (t<1){
+          context.beginPath();
+          context.moveTo(currentX, currentY); // 毎回スタート地点からの線を引き始めると線がjaggedになる
+          context.lineTo(currentX+(endX-startX)*0.01, currentY+(endY-startY)*0.01);
+          currentX = currentX+(endX-startX)*0.01
+          currentY = currentY+(endY-startY)*0.01
+          context.stroke();
+          t = t + 0.01
+          // Overwrite the bubbles which are already previewed.
+          for(var i=0; i<ideas.length; i++){
+            if (ideas[i] && ideas[i].angle == 360){
+              drawBubble(ideas[i],360)
+            }
+          }
+          requestAnimationFrame(animateLine.bind(null,startX,startY,currentX,currentY,endX,endY,t));
+        }else{
+          animatingLine = false;
+          requestAnimationFrame(preview);
+        }
+      }
+
+      // Click event
+      canvas.addEventListener('click', function(e){
+        if (e.offsetX > 20 && e.offsetX < 120 && e.offsetY > 20 && e.offsetY < 60){ // Click preview buttom
+          context.clearRect(0, 0, displaywidth, displayheight);
+          for(var i=0; i<ideas.length; i++){
+            ideas[i].angle = 0;
+          }
+          num = 0;
+          preview();
+          drawPreviewButtom();
+        } else if (isCreating){ // Click to create or update an idea
+          cancelAnimationFrame(requestId);
+          firstNavi = false;
+          createIdea(e);
+        } else { // Click to create a line
+          createLine(e);
+        }
+      });
+
+      // TODO 真ん中のmain topicは消えないようにする。フォントは大きくする
+
+    </script>
+  </body>
+</html>
